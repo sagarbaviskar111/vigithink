@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { apiPost } from '../api';
 import { MessageSquare, X, Send, Bot, User } from 'lucide-react';
 
 const Chatbot = () => {
@@ -29,24 +30,13 @@ const Chatbot = () => {
     setIsTyping(true);
 
     try {
-      // Pass the previous context so the AI remembers the conversation
-      const conversationHistory = messages.map(m => ({ role: m.role, content: m.content }));
-      
-      const response = await fetch(`http://${window.location.hostname}:3001/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMsg, conversationHistory })
-      });
-
-      const data = await response.json();
-      if (data.reply) {
-        setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
-      } else {
-        setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I am having trouble connecting to my central servers right now.' }]);
-      }
+      // Pass recent context so the AI remembers the conversation (server also caps/sanitises it)
+      const conversationHistory = messages.slice(-10).map(m => ({ role: m.role, content: m.content }));
+      const data = await apiPost('/api/chat', { message: userMsg, conversationHistory });
+      setMessages(prev => [...prev, { role: 'assistant', content: data.reply || 'Sorry, I could not generate a reply. Please try again.' }]);
     } catch (error) {
       console.error("Chat error:", error);
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Connection error. Please ensure the backend server is running.' }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I am unable to respond right now. Please try again in a moment or email info@vigithink.com.' }]);
     } finally {
       setIsTyping(false);
     }

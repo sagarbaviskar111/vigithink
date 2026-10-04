@@ -15,6 +15,7 @@ const About = lazy(() => import('./pages/About'));
 const Services = lazy(() => import('./pages/Services'));
 const Careers = lazy(() => import('./pages/Careers'));
 const Contact = lazy(() => import('./pages/Contact'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 const Pharmacovigilance = lazy(() => import('./pages/services/Pharmacovigilance'));
 const MedicalInformation = lazy(() => import('./pages/services/MedicalInformation'));
@@ -27,9 +28,13 @@ function App() {
   const location = useLocation();
 
   useEffect(() => {
-    // Auto trigger quote popup after 5 seconds
+    // Auto trigger quote popup after 5 seconds, once per browser session
+    let alreadyShown = false;
+    try { alreadyShown = sessionStorage.getItem('quotePopupShown') === '1'; } catch { /* storage unavailable */ }
+    if (alreadyShown) return undefined;
     const timer = setTimeout(() => {
       setIsModalOpen(true);
+      try { sessionStorage.setItem('quotePopupShown', '1'); } catch { /* storage unavailable */ }
     }, 5000);
 
     return () => clearTimeout(timer);
@@ -60,6 +65,7 @@ function App() {
               <Route path="/services/quality-assurance" element={<QualityAssurance />} />
               <Route path="/careers" element={<Careers />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </AnimatePresence>
         </Suspense>

@@ -2,3 +2,7 @@ node_modules
 dist
 .env
 .DS_Store
+Data/*.xlsx
+.env.local
+server/etmf/uploads/*
+!server/etmf/uploads/.gitkeep

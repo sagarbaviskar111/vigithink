@@ -1,29 +1,30 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiPost } from '../api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 
 const Modal = ({ isOpen, onClose }) => {
-  const { register, handleSubmit, formState: { errors }, reset } = useForm();
+  const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm();
+  const [status, setStatus] = useState(null);
+
+  useEffect(() => {
+    if (!isOpen) { setStatus(null); return undefined; }
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
 
   const onSubmit = async (data) => {
+    setStatus(null);
     try {
-      const payload = { ...data, requirement: data.service || '' };
-      const response = await fetch(`http://${window.location.hostname}:3001/api/contact`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (response.ok) {
-        alert("Thank you for your inquiry! Your request has been logged securely.");
-        reset();
-        onClose();
-      } else {
-        alert("Error saving inquiry safely. Please try again.");
-      }
+      await apiPost('/api/contact', { ...data, requirement: data.service || '' });
+      setStatus({ type: 'success', text: 'Thank you! Your request has been received.' });
+      reset();
+      setTimeout(onClose, 1800);
     } catch (error) {
-      console.error("Network error:", error);
-      alert("Could not connect to the backend server.");
+      console.error(error);
+      setStatus({ type: 'error', text: error.message || 'Something went wrong. Please try again.' });
     }
   };
 
@@ -43,6 +44,9 @@ const Modal = ({ isOpen, onClose }) => {
               animate={{ scale: 1, opacity: 1, y: 0, transition: { type: 'spring', damping: 25, stiffness: 300 } }}
               exit={{ scale: 0.8, opacity: 0, y: 30, transition: { duration: 0.2 } }}
               onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="quote-modal-title"
               className="bg-white rounded-2xl shadow-2xl w-full max-w-md relative overflow-hidden"
             >
               {/* Header */}
@@ -54,7 +58,7 @@ const Modal = ({ isOpen, onClose }) => {
                 >
                   <X size={24} />
                 </button>
-                <h2 className="text-2xl font-heading font-bold mb-1">Request a Quote</h2>
+                <h2 id="quote-modal-title" className="text-2xl font-heading font-bold mb-1">Request a Quote</h2>
                 <p className="text-blue-100 text-sm opacity-90">Let's discuss how we can accelerate your global clinical and safety operations.</p>
               </div>
 
@@ -76,7 +80,7 @@ const Modal = ({ isOpen, onClose }) => {
                       aria-label="Email Address"
                       placeholder="Email Address" 
                       className={`w-full bg-slate-50 border ${errors.email ? 'border-red-500' : 'border-slate-200'} rounded-lg px-4 py-2.5 text-slate-900 focus:outline-none focus:border-primary transition-colors`}
-                      {...register("email", { required: true, pattern: /^\S+@\S+$/i })}
+                      {...register("email", { required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ })}
                     />
                   </div>
                   <div>
@@ -119,9 +123,13 @@ const Modal = ({ isOpen, onClose }) => {
                     whileTap={{ scale: 0.95 }}
                     type="submit" 
                     className="w-full bg-accent text-white font-bold py-3 rounded-lg hover:bg-orange-600 transition-colors shadow-soft mt-2"
+                    disabled={isSubmitting}
                   >
-                    Submit Request
+                    {isSubmitting ? 'Submitting...' : 'Submit Request'}
                   </motion.button>
+                  {status && (
+                    <p role="status" aria-live="polite" className={`text-sm font-medium ${status.type === 'success' ? 'text-green-700' : 'text-red-600'}`}>{status.text}</p>
+                  )}
                 </form>
               </div>
             </motion.div>

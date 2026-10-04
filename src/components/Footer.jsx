@@ -29,11 +29,6 @@ const Footer = () => {
             <p className="text-sm leading-relaxed text-slate-400">
               A premier global CRO delivering comprehensive clinical operations, drug safety, and regulatory solutions with precision, speed, and global compliance.
             </p>
-            <div className="flex space-x-4 pt-2">
-              <motion.a whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }} href="#" className="text-slate-400 hover:text-white transition-colors" aria-label="Visit our LinkedIn page"><Linkedin size={20} /></motion.a>
-              <motion.a whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }} href="#" className="text-slate-400 hover:text-white transition-colors" aria-label="Visit our Twitter page"><Twitter size={20} /></motion.a>
-              <motion.a whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }} href="#" className="text-slate-400 hover:text-white transition-colors" aria-label="Visit our Facebook page"><Facebook size={20} /></motion.a>
-            </div>
           </div>
 
           {/* Quick Links */}
@@ -81,9 +76,9 @@ const Footer = () => {
         <div className="border-t border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-slate-500">
           <p>&copy; {currentYear} VigiThink Life Sciences. All rights reserved.</p>
           <div className="flex space-x-4 mt-4 md:mt-0">
-            <a href="#" className="hover:text-slate-400">Privacy Policy</a>
-            <a href="#" className="hover:text-slate-400">Terms of Service</a>
-            <a href="#" className="hover:text-slate-400">Cookie Policy</a>
+            <a href="mailto:info@vigithink.com?subject=Privacy%20Policy%20request" className="hover:text-slate-400">Privacy Policy</a>
+            <a href="mailto:info@vigithink.com?subject=Terms%20of%20Service%20request" className="hover:text-slate-400">Terms of Service</a>
+            <a href="mailto:info@vigithink.com?subject=Cookie%20Policy%20request" className="hover:text-slate-400">Cookie Policy</a>
           </div>
         </div>
       </div>

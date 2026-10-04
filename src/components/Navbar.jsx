@@ -26,6 +26,7 @@ const Navbar = ({ onOpenModal }) => {
     { name: 'About', path: '/about' },
     { name: 'Services', path: '/services' },
     { name: 'Careers', path: '/careers' },
+    { name: 'eTMF Tool', path: '/etmf/', external: true }, // separate app (login required)
     { name: 'Contact', path: '/contact' },
   ];
 
@@ -50,12 +51,18 @@ const Navbar = ({ onOpenModal }) => {
           <div className="hidden md:flex items-center space-x-8 text-sm font-bold tracking-wide">
             {navLinks.map((link) => (
               <motion.div key={link.name} whileHover={{ y: -2, transition: { duration: 0.2, ease: "easeOut" } }} whileTap={{ scale: 0.95 }}>
-                <Link
-                  to={link.path}
-                  className={`transition-colors ${location.pathname === link.path ? 'text-primary' : 'text-slate-600 hover:text-primary'}`}
-                >
-                  {link.name}
-                </Link>
+                {link.external ? (
+                  <a href={link.path} className="transition-colors text-slate-600 hover:text-primary">
+                    {link.name}
+                  </a>
+                ) : (
+                  <Link
+                    to={link.path}
+                    className={`transition-colors ${location.pathname === link.path ? 'text-primary' : 'text-slate-600 hover:text-primary'}`}
+                  >
+                    {link.name}
+                  </Link>
+                )}
               </motion.div>
             ))}
             <motion.button
@@ -93,13 +100,23 @@ const Navbar = ({ onOpenModal }) => {
           >
             <div className="px-4 pt-2 pb-6 space-y-2 flex flex-col items-center">
               {navLinks.map((link) => (
-                <Link
-                  key={link.name}
-                  to={link.path}
-                  className={`block px-3 py-2 text-base font-medium w-full text-center rounded-md transition-colors ${location.pathname === link.path ? 'text-primary bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}
-                >
-                  {link.name}
-                </Link>
+                link.external ? (
+                  <a
+                    key={link.name}
+                    href={link.path}
+                    className="block px-3 py-2 text-base font-medium w-full text-center rounded-md transition-colors text-slate-600 hover:bg-slate-50"
+                  >
+                    {link.name}
+                  </a>
+                ) : (
+                  <Link
+                    key={link.name}
+                    to={link.path}
+                    className={`block px-3 py-2 text-base font-medium w-full text-center rounded-md transition-colors ${location.pathname === link.path ? 'text-primary bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}
+                  >
+                    {link.name}
+                  </Link>
+                )
               ))}
               <motion.button
                 whileHover={{ scale: 1.02 }}

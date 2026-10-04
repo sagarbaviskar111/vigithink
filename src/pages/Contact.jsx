@@ -1,28 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { apiPost } from '../api';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { Mail, MapPin, Phone, MessageSquare } from 'lucide-react';
 
 const Contact = () => {
-  const { register, handleSubmit, formState: { errors }, reset } = useForm();
+  const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm();
+
+  const [status, setStatus] = useState(null); // { type: 'success' | 'error', text }
 
   const onSubmit = async (data) => {
+    setStatus(null);
     try {
-      const response = await fetch(`http://${window.location.hostname}:3001/api/contact`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      if (response.ok) {
-        alert("Message sent successfully! Our commercial team will contact you within 24 hours. Data has been saved to Excel.");
-        reset();
-      } else {
-        alert("Server error. Could not save to Excel.");
-      }
+      await apiPost('/api/contact', data);
+      setStatus({ type: 'success', text: 'Thank you! Your message has been sent. Our team will contact you within 24 hours.' });
+      reset();
     } catch (e) {
       console.error(e);
-      alert("Error communicating with server. Please try again later.");
+      setStatus({ type: 'error', text: e.message || 'Something went wrong. Please try again later.' });
     }
   };
 
@@ -110,47 +106,52 @@ const Contact = () => {
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-bold tracking-wide text-slate-600 mb-2">Full Name *</label>
+                    <label htmlFor="c-name" className="block text-sm font-bold tracking-wide text-slate-600 mb-2">Full Name *</label>
                     <input 
                       type="text" 
                       className={`w-full bg-slate-50 border ${errors.name ? 'border-red-500' : 'border-slate-200'} rounded-lg px-4 py-3 text-slate-900 focus:outline-none focus:border-primary focus:bg-white transition-colors`}
+                      id="c-name"
                       {...register("name", { required: true })}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold tracking-wide text-slate-600 mb-2">Email Address *</label>
+                    <label htmlFor="c-email" className="block text-sm font-bold tracking-wide text-slate-600 mb-2">Email Address *</label>
                     <input 
                       type="email" 
                       className={`w-full bg-slate-50 border ${errors.email ? 'border-red-500' : 'border-slate-200'} rounded-lg px-4 py-3 text-slate-900 focus:outline-none focus:border-primary focus:bg-white transition-colors`}
-                      {...register("email", { required: true, pattern: /^\S+@\S+$/i })}
+                      id="c-email"
+                      {...register("email", { required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ })}
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-bold tracking-wide text-slate-600 mb-2">Phone Number</label>
+                    <label htmlFor="c-phone" className="block text-sm font-bold tracking-wide text-slate-600 mb-2">Phone Number</label>
                     <input 
                       type="tel" 
                       className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 focus:outline-none focus:border-primary focus:bg-white transition-colors"
+                      id="c-phone"
                       {...register("phone")}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold tracking-wide text-slate-600 mb-2">Company Name</label>
+                    <label htmlFor="c-company" className="block text-sm font-bold tracking-wide text-slate-600 mb-2">Company Name</label>
                     <input 
                       type="text" 
                       className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 focus:outline-none focus:border-primary focus:bg-white transition-colors"
+                      id="c-company"
                       {...register("company")}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold tracking-wide text-slate-600 mb-2">Service Requirement</label>
+                  <label htmlFor="c-req" className="block text-sm font-bold tracking-wide text-slate-600 mb-2">Service Requirement</label>
                   <select 
                     className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 focus:outline-none focus:border-primary focus:bg-white transition-colors"
-                    {...register("requirement")}
+                    id="c-req"
+                      {...register("requirement")}
                     defaultValue="General Inquiry"
                   >
                     <option value="General Inquiry">General Inquiry</option>
@@ -164,11 +165,12 @@ const Contact = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold tracking-wide text-slate-600 mb-2">Message *</label>
+                  <label htmlFor="c-msg" className="block text-sm font-bold tracking-wide text-slate-600 mb-2">Message *</label>
                   <textarea 
                     rows="5"
                     className={`w-full bg-slate-50 border ${errors.message ? 'border-red-500' : 'border-slate-200'} rounded-lg px-4 py-3 text-slate-900 focus:outline-none focus:border-primary focus:bg-white transition-colors resize-none`}
-                    {...register("message", { required: true })}
+                    id="c-msg"
+                      {...register("message", { required: true })}
                   ></textarea>
                 </div>
                 
@@ -177,9 +179,13 @@ const Contact = () => {
                   whileTap={{ scale: 0.95 }}
                   type="submit" 
                   className="w-full sm:w-auto px-10 py-3 text-lg bg-primary text-white font-bold rounded-lg hover:bg-blue-800 transition-colors shadow-soft"
+                  disabled={isSubmitting}
                 >
-                  Send Message
+                  {isSubmitting ? 'Sending...' : 'Send Message'}
                 </motion.button>
+                {status && (
+                  <p role="status" aria-live="polite" className={`text-sm font-medium ${status.type === 'success' ? 'text-green-700' : 'text-red-600'}`}>{status.text}</p>
+                )}
               </form>
             </motion.div>
 
