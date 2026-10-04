@@ -16,6 +16,8 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 app.disable('x-powered-by');
+// Behind nginx: trust the first proxy so req.ip (rate limiting, audit trail) is the real client IP
+app.set('trust proxy', Number(process.env.TRUST_PROXY ?? 1));
 
 const PORT = Number(process.env.PORT) || 3001;
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173')
