@@ -51,7 +51,28 @@ if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
+// Chat providers, tried in order: Gemini -> Groq -> OpenAI. If none is configured (or all fail) built-in replies are used.
+// All three expose an OpenAI-compatible API, so one SDK covers them.
+const AI_PROVIDERS = [
+  process.env.GEMINI_API_KEY && {
+    name: 'gemini',
+    client: new OpenAI({ apiKey: process.env.GEMINI_API_KEY, baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/' }),
+    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+    maxTokens: 600 // Gemini 2.5 counts internal reasoning tokens too
+  },
+  process.env.GROQ_API_KEY && {
+    name: 'groq',
+    client: new OpenAI({ apiKey: process.env.GROQ_API_KEY, baseURL: 'https://api.groq.com/openai/v1' }),
+    model: process.env.GROQ_MODEL || 'openai/gpt-oss-20b',
+    maxTokens: 600
+  },
+  process.env.OPENAI_API_KEY && {
+    name: 'openai',
+    client: new OpenAI({ apiKey: process.env.OPENAI_API_KEY }),
+    model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+    maxTokens: 150
+  }
+].filter(Boolean);
 
 // -------------------------
 // CONTACT / LEADS (Excel store)
@@ -115,7 +136,7 @@ app.post('/api/contact', contactLimiter, async (req, res) => {
   }
 });
 
-app.get('/api/health', (req, res) => res.json({ status: 'ok', ai: Boolean(openai) }));
+app.get('/api/health', (req, res) => res.json({ status: 'ok', ai: AI_PROVIDERS.length ? AI_PROVIDERS.map(p => p.name) : false }));
 
 // -------------------------
 // CHATBOT LOGIC (ChatGPT)
@@ -179,32 +200,39 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
   if (typeof message !== 'string' || !message.trim()) return res.status(400).json({ error: 'Message is required.' });
   if (message.length > 1000) return res.status(400).json({ error: 'Message is too long.' });
 
-  if (!openai) {
+  const mockReply = async () => {
     const lower = message.toLowerCase();
     const rule = MOCK_RULES.find(([re]) => re.test(lower));
     await new Promise(r => setTimeout(r, 600));
     return res.json({ reply: rule ? rule[1] : MOCK_FALLBACK, mock: true });
+  };
+
+  if (AI_PROVIDERS.length === 0) return mockReply();
+
+  const messages = [
+    { role: 'system', content: SYSTEM_PROMPT },
+    ...sanitizeHistory(conversationHistory),
+    { role: 'user', content: message.trim() }
+  ];
+
+  for (const provider of AI_PROVIDERS) {
+    try {
+      const response = await provider.client.chat.completions.create({
+        model: provider.model,
+        messages,
+        temperature: 0.7,
+        max_tokens: provider.maxTokens
+      });
+      const reply = response.choices[0]?.message?.content?.trim();
+      if (reply) return res.json({ reply, provider: provider.name });
+      console.error(`AI provider ${provider.name} returned an empty reply`);
+    } catch (error) {
+      console.error(`AI provider ${provider.name} error:`, error?.status || '', error?.message || error);
+    }
   }
 
-  try {
-    const messages = [
-      { role: 'system', content: SYSTEM_PROMPT },
-      ...sanitizeHistory(conversationHistory),
-      { role: 'user', content: message.trim() }
-    ];
-
-    const response = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
-      messages,
-      temperature: 0.7,
-      max_tokens: 150
-    });
-
-    res.json({ reply: response.choices[0].message.content });
-  } catch (error) {
-    console.error('OpenAI Error:', error);
-    res.status(500).json({ error: 'Failed to communicate with AI provider.' });
-  }
+  // Every provider failed: degrade to the built-in answers instead of an error
+  return mockReply();
 });
 
 // eTMF tool (login-protected, MongoDB backed)
@@ -230,5 +258,5 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, process.env.HOST || '0.0.0.0', () => {
-  console.log(`Backend Server active on port ${PORT} (chat: ${openai ? 'OpenAI' : 'mock replies, set OPENAI_API_KEY for AI'})`);
+  console.log(`Backend Server active on port ${PORT} (chat: ${AI_PROVIDERS.length ? AI_PROVIDERS.map(p => `${p.name}/${p.model}`).join(' -> ') : 'mock replies - set GEMINI_API_KEY / GROQ_API_KEY / OPENAI_API_KEY for AI'})`);
 });
