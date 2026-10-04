@@ -3,8 +3,8 @@ import mongoose from 'mongoose';
 const UserSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true, index: true },
   name: { type: String, required: true },
-  loginId: { type: String, required: true, index: true },
-  email: { type: String, required: true, index: true },
+  loginId: { type: String, required: true, unique: true },
+  email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   mobile: { type: String, default: '' },
   course: { type: String, default: 'Clinical Research & Pharmacovigilance' },

@@ -16,22 +16,7 @@ export const TMFDataProvider = ({ children }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isBackendConnected, setIsBackendConnected] = useState(false);
-  const [customFolders, setCustomFolders] = useState(() => {
-    try {
-      const saved = localStorage.getItem('vigithink_custom_folders');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('vigithink_custom_folders', JSON.stringify(customFolders));
-    } catch (e) {
-      // ignore
-    }
-  }, [customFolders]);
+  const [customFolders, setCustomFolders] = useState([]);
 
   // Helper to fetch data from MongoDB backend
   const fetchAllData = async () => {
@@ -79,9 +64,6 @@ export const TMFDataProvider = ({ children }) => {
         const foldersJson = await foldersRes.json();
         if (foldersJson.success && Array.isArray(foldersJson.data)) {
           setCustomFolders(foldersJson.data);
-          if (foldersJson.data.length === 0) {
-            localStorage.removeItem('vigithink_custom_folders');
-          }
         }
       }
 
@@ -113,7 +95,6 @@ export const TMFDataProvider = ({ children }) => {
         setMilestones([]);
         setQueries([]);
         setCustomFolders([]);
-        localStorage.removeItem('vigithink_custom_folders');
         if (clearStudies) {
           setStudies([]);
         }

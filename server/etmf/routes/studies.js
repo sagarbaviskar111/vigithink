@@ -1,4 +1,5 @@
 import express from 'express';
+import { sendError } from '../errors.js';
 import { studyScopeQuery } from '../permissions.js';
 import { Study } from '../models/Study.js';
 import { Document } from '../models/Document.js';
@@ -12,7 +13,7 @@ router.get('/', async (req, res) => {
     const studies = await Study.find(studyScopeQuery(req.authUser, 'id')).sort({ createdAt: -1 });
     res.json({ success: true, count: studies.length, data: studies });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF studies');
   }
 });
 
@@ -39,7 +40,7 @@ router.get('/:id', async (req, res) => {
       }
     });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF studies');
   }
 });
 
@@ -67,7 +68,7 @@ router.post('/', async (req, res) => {
 
     res.status(201).json({ success: true, data: saved });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF studies');
   }
 });
 
@@ -100,7 +101,7 @@ router.post('/:id/country', async (req, res) => {
 
     res.status(201).json({ success: true, data: updated });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF studies');
   }
 });
 
@@ -138,7 +139,7 @@ router.post('/:id/site', async (req, res) => {
 
     res.status(201).json({ success: true, data: updated });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF studies');
   }
 });
 
@@ -178,7 +179,7 @@ router.put('/:id/archive', async (req, res) => {
 
     res.json({ success: true, data: updated });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF studies');
   }
 });
 
@@ -208,7 +209,7 @@ router.delete('/:id', async (req, res) => {
 
     res.json({ success: true, deletedId: studyId });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF studies');
   }
 });
 

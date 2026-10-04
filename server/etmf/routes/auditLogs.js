@@ -1,4 +1,5 @@
 import express from 'express';
+import { sendError } from '../errors.js';
 import { studyScopeQuery } from '../permissions.js';
 import { AuditLog } from '../models/AuditLog.js';
 
@@ -22,7 +23,7 @@ router.get('/', async (req, res) => {
 
     res.json({ success: true, count: logs.length, data: logs });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF auditLogs');
   }
 });
 
@@ -42,7 +43,7 @@ router.post('/', async (req, res) => {
     const saved = await log.save();
     res.status(201).json({ success: true, data: saved });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF auditLogs');
   }
 });
 

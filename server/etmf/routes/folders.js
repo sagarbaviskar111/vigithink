@@ -1,4 +1,5 @@
 import express from 'express';
+import { sendError } from '../errors.js';
 import { Folder } from '../models/Folder.js';
 import { AuditLog } from '../models/AuditLog.js';
 
@@ -40,7 +41,7 @@ router.get('/', async (req, res) => {
     const folders = await Folder.find(filter).sort({ createdAt: -1 });
     res.json({ success: true, count: folders.length, data: folders });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF folders');
   }
 });
 
@@ -70,7 +71,7 @@ router.post('/', async (req, res) => {
     await logFolderAudit(req, 'FOLDER_CREATED', saved, 'None', `Folder: ${saved.name}`, `Created custom folder in ${saved.tmf_zone_id ? `Zone ${saved.tmf_zone_id}` : 'Study Root'}`);
     res.status(201).json({ success: true, data: saved });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF folders');
   }
 });
 
@@ -90,7 +91,7 @@ router.put('/:id', async (req, res) => {
     await logFolderAudit(req, 'FOLDER_RENAMED', updated, oldName, updated.name, 'User renamed custom folder');
     res.json({ success: true, data: updated });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF folders');
   }
 });
 
@@ -106,7 +107,7 @@ router.delete('/:id', async (req, res) => {
     await logFolderAudit(req, 'FOLDER_DELETED', folder, folder.name, 'DELETED', 'User deleted custom folder');
     res.json({ success: true, message: `Folder ${folder.name} deleted.` });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF folders');
   }
 });
 

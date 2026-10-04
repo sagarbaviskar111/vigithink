@@ -1,4 +1,5 @@
 import express from 'express';
+import { sendError } from '../errors.js';
 import { Document } from '../models/Document.js';
 import { Study } from '../models/Study.js';
 import { AuditLog } from '../models/AuditLog.js';
@@ -32,7 +33,7 @@ router.get('/completeness', async (req, res) => {
       }
     });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF reports');
   }
 });
 
@@ -57,7 +58,7 @@ router.get('/copy-logs', async (req, res) => {
 
     res.json({ success: true, count: formatted.length, data: formatted });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF reports');
   }
 });
 

@@ -1,4 +1,5 @@
 import express from 'express';
+import { sendError } from '../errors.js';
 import { studyScopeQuery, withScope } from '../permissions.js';
 import { Milestone } from '../models/Milestone.js';
 import { AuditLog } from '../models/AuditLog.js';
@@ -13,7 +14,7 @@ router.get('/', async (req, res) => {
     const milestones = await Milestone.find(filter).sort({ seq: 1 });
     res.json({ success: true, count: milestones.length, data: milestones });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF milestones');
   }
 });
 
@@ -48,7 +49,7 @@ router.put('/:id', async (req, res) => {
 
     res.json({ success: true, data: milestone });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF milestones');
   }
 });
 
@@ -59,7 +60,7 @@ router.post('/', async (req, res) => {
     const saved = await milestone.save();
     res.status(201).json({ success: true, data: saved });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF milestones');
   }
 });
 

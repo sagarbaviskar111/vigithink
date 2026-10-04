@@ -29,6 +29,10 @@ const DocumentSchema = new mongoose.Schema({
     default: 'Draft',
     index: true
   },
+  removed_at: { type: String, default: '' },
+  removed_by_id: { type: String, default: '' },
+  removed_by_name: { type: String, default: '' },
+  removal_reason: { type: String, default: '' },
   is_placeholder: { type: Boolean, default: false },
   is_essential_document: { type: Boolean, default: true },
   is_certified_copy: { type: Boolean, default: false },

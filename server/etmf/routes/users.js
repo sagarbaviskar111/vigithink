@@ -65,6 +65,15 @@ router.post('/login', async (req, res) => {
 
     // Same message for unknown user and wrong password (no account enumeration)
     if (!user || !(await verifyPassword(password, user.password))) {
+      await logUserAudit(
+        user ? publicUser(user) : { id: 'anonymous', name: 'Unknown', roleId: 'none' },
+        'USER_LOGIN_FAILED',
+        loginInput.trim().slice(0, 100),
+        user ? user.name : 'Unknown account',
+        'Logged Out',
+        'Login rejected',
+        'Failed authentication attempt'
+      );
       return res.status(401).json({ success: false, error: 'Invalid Login ID / Email or password.' });
     }
 

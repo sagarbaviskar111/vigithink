@@ -1,4 +1,5 @@
 import express from 'express';
+import { sendError } from '../errors.js';
 import multer from 'multer';
 import crypto from 'crypto';
 import fs from 'fs';
@@ -69,7 +70,7 @@ const logAudit = async (req, action, targetId, targetTitle, studyId, oldValue, n
 // Enforce study/country/site scope on every route that addresses a single document
 router.param('id', async (req, res, next, id) => {
   try {
-    if (id === 'upload' || id === 'export') return next();
+    if (id === 'upload' || id === 'export' || id === 'integrity-check') return next();
     const doc = await Document.findOne({ document_id: id }).select('study_id country_code site_id');
     if (doc && !docInScope(req.authUser, doc)) {
       return res.status(403).json({ success: false, error: 'This document is outside your assigned study / country / site scope.' });
@@ -89,7 +90,8 @@ router.get('/', async (req, res) => {
     if (study_id && study_id !== 'ALL') filter.study_id = study_id;
     if (tmf_zone_id && tmf_zone_id !== 'ALL') filter.tmf_zone_id = tmf_zone_id;
     if (tmf_artifact_id) filter.tmf_artifact_id = tmf_artifact_id;
-    if (status && status !== 'ALL') filter.status = status;
+    // Removed (soft-deleted) records are hidden unless explicitly requested
+    filter.status = status && status !== 'ALL' ? status : { $ne: 'Removed' };
     if (qc_status && qc_status !== 'ALL') filter.qc_status = qc_status;
 
     if (search) {
@@ -107,7 +109,7 @@ router.get('/', async (req, res) => {
     const docs = await Document.find(withScope(filter, docScopeQuery(req.authUser))).sort({ upload_date_time: -1 });
     res.json({ success: true, count: docs.length, data: docs });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF documents');
   }
 });
 
@@ -144,7 +146,35 @@ router.get('/export/manifest', async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="VigiThink_eTMF_Manifest_${study_id || 'All'}.csv"`);
     res.send(csvContent);
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF documents');
+  }
+});
+
+// GET /api/documents/integrity-check - Re-compute SHA-256 of every stored file and compare with the filed hash
+router.get('/integrity-check', async (req, res) => {
+  try {
+    const { study_id } = req.query;
+    const filter = { status: { $ne: 'Removed' }, file_path: { $nin: [null, ''] } };
+    if (study_id && study_id !== 'ALL') filter.study_id = study_id;
+
+    const docs = await Document.find(withScope(filter, docScopeQuery(req.authUser))).select('document_id document_title checksum_hash file_path');
+    const result = { checked: 0, verified: 0, tampered: [], missing: [], checkedAt: new Date().toISOString() };
+
+    for (const doc of docs) {
+      const fullPath = path.resolve(uploadDir, path.basename(doc.file_path));
+      if (!fs.existsSync(fullPath)) {
+        result.missing.push({ document_id: doc.document_id, title: doc.document_title });
+        continue;
+      }
+      result.checked += 1;
+      const digest = crypto.createHash('sha256').update(fs.readFileSync(fullPath)).digest('hex');
+      if (digest === doc.checksum_hash) result.verified += 1;
+      else result.tampered.push({ document_id: doc.document_id, title: doc.document_title });
+    }
+
+    res.json({ success: true, data: result });
+  } catch (err) {
+    sendError(res, err, 'eTMF integrity');
   }
 });
 
@@ -157,7 +187,7 @@ router.get('/:id', async (req, res) => {
     }
     res.json({ success: true, data: doc });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF documents');
   }
 });
 
@@ -231,7 +261,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 
     res.status(201).json({ success: true, data: savedDoc });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF documents');
   }
 });
 
@@ -286,7 +316,7 @@ router.post('/', async (req, res) => {
 
     res.status(201).json({ success: true, data: savedDoc });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF documents');
   }
 });
 
@@ -317,7 +347,7 @@ router.put('/:id/metadata', async (req, res) => {
 
     res.json({ success: true, data: updated });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF documents');
   }
 });
 
@@ -369,7 +399,7 @@ router.put('/:id/qc', async (req, res) => {
 
     res.json({ success: true, data: updated });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF documents');
   }
 });
 
@@ -471,7 +501,7 @@ router.put('/:id/checkout', async (req, res) => {
     const updated = await doc.save();
     res.json({ success: true, data: updated });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF documents');
   }
 });
 
@@ -507,7 +537,7 @@ router.post('/:id/comments', async (req, res) => {
 
     res.json({ success: true, data: updated });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF documents');
   }
 });
 
@@ -557,7 +587,7 @@ router.post('/:id/copy', async (req, res) => {
 
     res.status(201).json({ success: true, data: savedCopy });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF documents');
   }
 });
 
@@ -593,7 +623,7 @@ router.post('/:id/move', async (req, res) => {
 
     res.json({ success: true, data: updated });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF documents');
   }
 });
 
@@ -638,7 +668,7 @@ router.post('/:id/version', async (req, res) => {
 
     res.json({ success: true, data: updated });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF documents');
   }
 });
 
@@ -702,7 +732,7 @@ Generated on: ${new Date().toISOString()} (UTC) | Clinidea Education VigiThink e
     res.setHeader('Content-Disposition', `attachment; filename="${doc.document_id}_Part11_Certified.txt"`);
     res.send(certifiedContent);
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF documents');
   }
 });
 
@@ -714,22 +744,33 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Document not found' });
     }
 
-    await Document.deleteOne({ document_id: req.params.id });
+    // Records are never purged (ICH GCP / Part 11): mark as Removed and keep the file and the audit trail
+    const reason = String(req.body?.reason || '').trim();
+    if (!reason) {
+      return res.status(400).json({ success: false, error: 'A reason is required to remove a document.' });
+    }
+    const previousStatus = doc.status;
+    doc.status = 'Removed';
+    doc.removed_at = new Date().toISOString();
+    doc.removed_by_id = req.authUser.id;
+    doc.removed_by_name = req.authUser.name;
+    doc.removal_reason = reason;
+    await doc.save();
 
     await logAudit(
       req,
-      'DOCUMENT_DELETED',
+      'DOCUMENT_REMOVED',
       doc.document_id,
       doc.document_title,
       doc.study_id,
-      `Status: ${doc.status}`,
-      'DELETED',
-      req.body?.reason || 'Deleted by System Administrator'
+      `Status: ${previousStatus}`,
+      'REMOVED (retained, not purged)',
+      reason
     );
 
-    res.json({ success: true, message: `Document ${doc.document_id} permanently deleted.` });
+    res.json({ success: true, message: `Document ${doc.document_id} removed from active filing (record retained).` });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF documents');
   }
 });
 

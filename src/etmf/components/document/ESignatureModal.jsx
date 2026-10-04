@@ -114,9 +114,10 @@ export default function ESignatureModal({ doc, onClose }) {
             </button>
             <button
               type="submit"
-              className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm flex items-center gap-1.5 cursor-pointer"
+              disabled={isSigning}
+              className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
-              <Lock className="w-3.5 h-3.5" /> Sign & Mark Effective
+              <Lock className="w-3.5 h-3.5" /> {isSigning ? "Verifying..." : "Sign & Mark Effective"}
             </button>
           </div>
         </form>

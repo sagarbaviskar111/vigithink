@@ -1,4 +1,5 @@
 import express from 'express';
+import { sendError } from '../errors.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -38,7 +39,7 @@ router.get('/status', async (req, res) => {
       }
     });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF system');
   }
 });
 
@@ -49,7 +50,6 @@ router.post('/clear-data', async (req, res) => {
 
     await Promise.all([
       Document.deleteMany({}),
-      AuditLog.deleteMany({}),
       Milestone.deleteMany({}),
       Query.deleteMany({}),
       Folder.deleteMany({})
@@ -75,11 +75,11 @@ router.post('/clear-data', async (req, res) => {
 
     res.json({
       success: true,
-      message: 'All documents, custom folders, uploaded files, milestones, queries, and audit logs have been completely wiped. System is clean and ready for live production use.',
+      message: 'All documents, custom folders, uploaded files, milestones and queries have been wiped. The audit trail is retained. System is clean and ready for live production use.',
       clearedStudies: !!clearStudies
     });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF system');
   }
 });
 
@@ -89,7 +89,6 @@ router.post('/reset-demo', async (req, res) => {
     await Promise.all([
       Document.deleteMany({}),
       Study.deleteMany({}),
-      AuditLog.deleteMany({}),
       Milestone.deleteMany({}),
       Query.deleteMany({})
     ]);
@@ -101,7 +100,7 @@ router.post('/reset-demo', async (req, res) => {
       message: 'Demo clinical trial dataset restored successfully.'
     });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF system');
   }
 });
 

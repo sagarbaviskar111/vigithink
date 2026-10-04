@@ -1,4 +1,5 @@
 import express from 'express';
+import { sendError } from '../errors.js';
 import { studyScopeQuery, withScope } from '../permissions.js';
 import { Query } from '../models/Query.js';
 import { Document } from '../models/Document.js';
@@ -17,7 +18,7 @@ router.get('/', async (req, res) => {
     const queries = await Query.find(withScope(filter, studyScopeQuery(req.authUser))).sort({ createdAt: -1 });
     res.json({ success: true, count: queries.length, data: queries });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF queries');
   }
 });
 
@@ -68,7 +69,7 @@ router.post('/', async (req, res) => {
 
     res.status(201).json({ success: true, data: saved });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF queries');
   }
 });
 
@@ -123,7 +124,7 @@ router.put('/:id/resolve', async (req, res) => {
 
     res.json({ success: true, data: updated });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendError(res, err, 'eTMF queries');
   }
 });
 

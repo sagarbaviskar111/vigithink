@@ -3,6 +3,7 @@ import { useTMFData } from '../context/TMFDataContext';
 import { useAuth } from '../context/AuthContext';
 import { ShieldAlert, Download, CheckCircle2, FileCheck, Search, Eye, AlertCircle, RefreshCw } from 'lucide-react';
 import DocumentViewerDrawer from '../components/document/DocumentViewerDrawer';
+import { runIntegrityCheck } from '../integrity';
 
 export default function InspectorPortal() {
   const { documents, activeStudy, selectedStudyId, auditLogs } = useTMFData();
@@ -13,16 +14,25 @@ export default function InspectorPortal() {
 
   const effectiveDocs = documents.filter(d => d.study_id === selectedStudyId && (d.status === 'Effective' || d.status === 'Approved'));
 
-  const handleVerifyIntegrity = () => {
+  const handleVerifyIntegrity = async () => {
     setIsVerifyingHashes(true);
-    setTimeout(() => {
-      setIsVerifyingHashes(false);
+    setHashResult(null);
+    try {
+      const r = await runIntegrityCheck(selectedStudyId);
+      const problems = r.tampered.length + r.missing.length;
       setHashResult({
-        totalVerified: effectiveDocs.length,
-        tampered: 0,
-        status: "PASSED — 100% Data Integrity Verified against SHA-256 Original Hashes"
+        ok: problems === 0,
+        checked: r.checked,
+        verified: r.verified,
+        tampered: r.tampered.length,
+        missing: r.missing.length,
+        checkedAt: r.checkedAt
       });
-    }, 1200);
+    } catch (e) {
+      setHashResult({ error: e.message });
+    } finally {
+      setIsVerifyingHashes(false);
+    }
   };
 
   const handleDownloadInspectionPackage = () => {
@@ -38,7 +48,7 @@ PACKAGE CONTENTS & INTEGRITY MANIFEST:
 --------------------------------------------------------------------------------
 1. TMF Master Index: DIA TMF Ref Model v3.1 compliant index with 11 zones.
 2. Verified Active Documents: ${effectiveDocs.length} records verified.
-3. Cryptographic Hashes: 100% SHA-256 match with tamper-evident blockchain seal.
+3. Cryptographic Hashes: SHA-256 digests recorded per document (see list below); run the integrity check in the portal for a live verification.
 4. Part 11 Audit Trail: Full lifecycle history, timestamps, IP addresses, e-signatures.
 5. Electronic Signatures: Validated under 21 CFR 11.50 with signer authority.
 
@@ -126,8 +136,10 @@ Digitally certified by Clinidea Education Quality Assurance & Compliance Dept.
         </div>
 
         {hashResult && (
-          <div className="p-3 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded text-xs font-mono font-bold">
-            {hashResult.status} ({hashResult.totalVerified} documents verified, {hashResult.tampered} discrepancies)
+          <div className={`p-3 border rounded text-xs font-mono font-bold ${hashResult.error ? 'bg-rose-50 border-rose-300 text-rose-900' : hashResult.ok ? 'bg-emerald-50 border-emerald-300 text-emerald-900' : 'bg-amber-50 border-amber-300 text-amber-900'}`}>
+            {hashResult.error
+              ? hashResult.error
+              : `${hashResult.ok ? 'PASSED' : 'ATTENTION'} - ${hashResult.verified} of ${hashResult.checked} stored files match their filed SHA-256 hash; ${hashResult.tampered} mismatched, ${hashResult.missing} file(s) missing. Checked ${new Date(hashResult.checkedAt).toLocaleString()}.`}
           </div>
         )}
       </div>

@@ -33,4 +33,15 @@ AuditLogSchema.pre('save', function () {
   }
 });
 
+// Part 11 audit trail is append-only: block every update / delete path at the model level
+const IMMUTABLE_OPS = ['updateOne', 'updateMany', 'findOneAndUpdate', 'findOneAndReplace', 'replaceOne', 'deleteOne', 'deleteMany', 'findOneAndDelete'];
+IMMUTABLE_OPS.forEach((op) => {
+  AuditLogSchema.pre(op, function () {
+    throw new Error('Audit log entries are immutable and cannot be modified or deleted.');
+  });
+});
+AuditLogSchema.pre('save', function () {
+  if (!this.isNew) throw new Error('Audit log entries are immutable and cannot be modified.');
+});
+
 export const AuditLog = mongoose.model('AuditLog', AuditLogSchema);
