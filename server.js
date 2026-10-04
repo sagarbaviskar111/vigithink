@@ -229,6 +229,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error.' });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, process.env.HOST || '0.0.0.0', () => {
   console.log(`Backend Server active on port ${PORT} (chat: ${openai ? 'OpenAI' : 'mock replies, set OPENAI_API_KEY for AI'})`);
 });
